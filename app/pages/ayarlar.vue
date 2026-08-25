@@ -14,7 +14,7 @@ function kaydet() {
 
 <template>
   <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-    <AppHeader title="Operations Command" />
+    <AppHeader title="Operasyon Merkezi" />
 
     <main class="flex-1 overflow-y-auto p-margin-canvas">
       <div class="max-w-max-content-width mx-auto flex flex-col gap-margin-canvas">

@@ -2,9 +2,9 @@
 const route = useRoute()
 
 const navItems = [
-  { label: 'Home', icon: 'home', to: '/' },
-  { label: 'Road Closures', icon: 'traffic', to: '/yol-kapamalar' },
-  { label: 'Settings', icon: 'settings', to: '/ayarlar' }
+  { label: 'Ana Sayfa', icon: 'home', to: '/' },
+  { label: 'Yol Kapamalar', icon: 'traffic', to: '/yol-kapamalar' },
+  { label: 'Ayarlar', icon: 'settings', to: '/ayarlar' }
 ]
 
 function isActive(to: string) {
@@ -26,7 +26,7 @@ function isActive(to: string) {
         </div>
         <div class="flex flex-col overflow-hidden">
           <span class="font-headline-md text-headline-md font-bold text-primary truncate">Ops Console</span>
-          <span class="font-label-sm text-label-sm text-on-surface-variant truncate">Regional Sector 7</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant truncate">Bölgesel Sektör 7</span>
         </div>
       </div>
     </div>

@@ -7,9 +7,9 @@ withDefaults(
     centered?: boolean
   }>(),
   {
-    title: 'Operations Command',
+    title: 'Operasyon Merkezi',
     showSearch: false,
-    searchPlaceholder: 'Search...',
+    searchPlaceholder: 'Ara...',
     centered: false
   }
 )
@@ -39,13 +39,13 @@ withDefaults(
 
     <!-- Sağ: aksiyon ikonları -->
     <div class="flex items-center gap-4 text-on-surface-variant">
-      <button class="hover:text-primary transition-colors active:scale-95 p-1.5 rounded" title="Notifications">
+      <button class="hover:text-primary transition-colors active:scale-95 p-1.5 rounded" title="Bildirimler">
         <span class="material-symbols-outlined">notifications</span>
       </button>
-      <button class="hover:text-primary transition-colors active:scale-95 p-1.5 rounded" title="Help">
+      <button class="hover:text-primary transition-colors active:scale-95 p-1.5 rounded" title="Yardım">
         <span class="material-symbols-outlined">help_outline</span>
       </button>
-      <button class="hover:text-primary transition-colors active:scale-95 p-1.5 rounded" title="Account">
+      <button class="hover:text-primary transition-colors active:scale-95 p-1.5 rounded" title="Hesap">
         <span class="material-symbols-outlined">account_circle</span>
       </button>
     </div>

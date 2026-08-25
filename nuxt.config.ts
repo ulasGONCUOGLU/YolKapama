@@ -7,7 +7,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Ops Console - Operations Command',
+      title: 'Ops Console - Operasyon Merkezi',
       htmlAttrs: { lang: 'tr', class: 'dark' },
       meta: [
         { charset: 'utf-8' },

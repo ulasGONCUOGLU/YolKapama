@@ -101,16 +101,16 @@ const activeCount = computed(() => closures.value.filter(c => c.aktif).length)
 
 <template>
   <main class="flex-1 flex flex-col min-w-0 bg-background relative z-0">
-    <AppHeader title="Operations Command" show-search search-placeholder="Search operations..." />
+    <AppHeader title="Operasyon Merkezi" show-search search-placeholder="İşlem ara..." />
 
     <div class="flex-1 overflow-auto p-gutter sm:p-margin-canvas">
       <div class="max-w-max-content-width mx-auto flex flex-col gap-6">
         <!-- Sayfa Başlığı -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 class="font-display text-display text-on-background">Yol Kapamalar (Road Closures)</h2>
+            <h2 class="font-display text-display text-on-background">Yol Kapamalar</h2>
             <p class="font-body-md text-body-md text-on-surface-variant mt-1">
-              Active and scheduled road closure intelligence for regional sector analysis.
+              Bölgesel sektör analizi için aktif ve planlanan yol kapama bilgileri.
             </p>
           </div>
           <div class="flex items-center gap-3">
@@ -118,13 +118,13 @@ const activeCount = computed(() => closures.value.filter(c => c.aktif).length)
               class="flex items-center gap-2 bg-transparent border border-outline-technical hover:bg-surface-variant text-on-surface font-label-sm text-label-sm py-2 px-4 rounded transition-colors duration-200"
             >
               <span class="material-symbols-outlined" style="font-size: 16px">filter_list</span>
-              Filter Data
+              Filtrele
             </button>
             <button
               class="flex items-center gap-2 bg-electric-blue hover:bg-primary text-background font-label-sm text-label-sm py-2 px-4 rounded transition-colors duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
             >
               <span class="material-symbols-outlined" style="font-size: 16px">add</span>
-              New Closure
+              Yeni Kapama
             </button>
           </div>
         </div>
@@ -135,11 +135,11 @@ const activeCount = computed(() => closures.value.filter(c => c.aktif).length)
             class="bg-surface-container border border-outline-technical rounded p-4 flex flex-col gap-2 relative overflow-hidden group hover:border-outline-variant transition-colors"
           >
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors" />
-            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Active Closures</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Aktif Kapamalar</span>
             <div class="flex items-baseline gap-2">
               <span class="font-display text-display text-primary">{{ activeCount }}</span>
               <span class="font-label-sm text-label-sm text-electric-blue flex items-center">
-                <span class="material-symbols-outlined" style="font-size: 14px">arrow_upward</span> Denizli Region
+                <span class="material-symbols-outlined" style="font-size: 14px">arrow_upward</span> Denizli Bölgesi
               </span>
             </div>
           </div>
@@ -147,17 +147,17 @@ const activeCount = computed(() => closures.value.filter(c => c.aktif).length)
             class="bg-surface-container border border-outline-technical rounded p-4 flex flex-col gap-2 relative overflow-hidden group hover:border-outline-variant transition-colors"
           >
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-error/5 rounded-full blur-xl group-hover:bg-error/10 transition-colors" />
-            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">AI Confidence Score</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">AI Güven Skoru</span>
             <div class="flex items-baseline gap-2">
               <span class="font-display text-display text-on-background">94%</span>
-              <span class="font-label-sm text-label-sm text-on-surface-variant">Avg Across Active</span>
+              <span class="font-label-sm text-label-sm text-on-surface-variant">Aktifler Ortalaması</span>
             </div>
           </div>
           <div
             class="bg-surface-container border border-outline-technical rounded p-4 flex flex-col gap-2 relative overflow-hidden group hover:border-outline-variant transition-colors"
           >
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-tertiary/5 rounded-full blur-xl group-hover:bg-tertiary/10 transition-colors" />
-            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Last Sync</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Son Senkronizasyon</span>
             <div class="flex items-baseline gap-2">
               <span class="font-display text-display text-on-background tabular-nums">15:05</span>
               <span class="font-label-sm text-label-sm text-on-surface-variant">UTC+3</span>
@@ -232,7 +232,7 @@ const activeCount = computed(() => closures.value.filter(c => c.aktif).length)
 
           <!-- Sayfalama -->
           <div class="px-4 py-3 border-t border-outline-technical bg-surface-container-highest flex items-center justify-between">
-            <span class="font-label-sm text-label-sm text-on-surface-variant">Showing 1-{{ closures.length }} of {{ closures.length }} results</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant">{{ closures.length }} sonuçtan 1-{{ closures.length }} gösteriliyor</span>
             <div class="flex items-center gap-2">
               <button
                 class="w-8 h-8 flex items-center justify-center rounded border border-outline-technical text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
