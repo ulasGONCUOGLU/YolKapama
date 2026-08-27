@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'yolkapama' })
+
 const systemPrompt = ref(
   `Sen Denizli'deki belediyelerin yol kapatma duyurularını analiz eden bir konum analiz sistemisin. Gelen metinleri inceleyip kapatılan caddeleri, sokakları, başlangıç ve bitiş tarihlerini çıkar.
 Güzergah metni:`

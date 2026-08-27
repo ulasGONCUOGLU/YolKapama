@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'yolkapama' })
+
 interface Closure {
   id: number
   guzergah: string

@@ -1,6 +1,5 @@
 <template>
-  <div class="bg-background text-on-background flex h-screen overflow-hidden font-body-md">
-    <AppSidebar />
+  <div class="bg-background text-on-background min-h-screen font-body-md">
     <slot />
   </div>
 </template>

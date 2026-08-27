@@ -1,0 +1,8 @@
+/* Yol Kapama modülüne özel stiller — sadece layouts/yolkapama.vue tarafından import edilir. */
+
+.json-viewer {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

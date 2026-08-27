@@ -3,8 +3,28 @@ export default defineNuxtConfig({
   future: { compatibilityVersion: 4 },
   compatibilityDate: '2025-08-25',
 
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase'],
 
+  // Modül bazlı bileşen klasörleri. pathPrefix: false sayesinde
+  // <AppSidebar>, <AppHeader>, <OpsMap> gibi isimler klasör öneki almadan kullanılır.
+  components: [
+    { path: '~/components/yolkapama', pathPrefix: false }
+  ],
+
+  supabase: {
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      exclude: ['/', '/login', '/register'],
+    },
+  },
+  runtimeConfig: {
+    public: {
+      supabaseUrl: '', 
+      supabaseKey: '',
+    },
+  },
+  
   app: {
     head: {
       title: 'Ops Console - Operasyon Merkezi',

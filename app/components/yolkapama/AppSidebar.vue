@@ -2,9 +2,9 @@
 const route = useRoute()
 
 const navItems = [
-  { label: 'Ana Sayfa', icon: 'home', to: '/' },
-  { label: 'Yol Kapamalar', icon: 'traffic', to: '/yol-kapamalar' },
-  { label: 'Ayarlar', icon: 'settings', to: '/ayarlar' }
+  { label: 'Ana Sayfa', icon: 'home', to: '/yolkapama' },
+  { label: 'Yol Kapamalar', icon: 'traffic', to: '/yolkapama/tablo' },
+  { label: 'Ayarlar', icon: 'settings', to: '/yolkapama/ayarlar' }
 ]
 
 function isActive(to: string) {
@@ -24,10 +24,17 @@ function isActive(to: string) {
         >
           <span class="material-symbols-outlined text-primary">shield_person</span>
         </div>
-        <div class="flex flex-col overflow-hidden">
+        <div class="flex flex-col overflow-hidden flex-1">
           <span class="font-headline-md text-headline-md font-bold text-primary truncate">Ops Console</span>
-          <span class="font-label-sm text-label-sm text-on-surface-variant truncate">Bölgesel Sektör 7</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant truncate">Ulaş Göncüoğlu</span>
         </div>
+        <NuxtLink
+          to="/"
+          title="Modüllere dön"
+          class="shrink-0 text-on-surface-variant hover:text-primary transition-colors p-1 rounded"
+        >
+          <span class="material-symbols-outlined text-[20px]">apps</span>
+        </NuxtLink>
       </div>
     </div>
 

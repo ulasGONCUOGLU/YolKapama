@@ -18,3 +18,4 @@ vite=8.2.2
 @nuxt/nitro-server=4.5.2
 @nuxt/schema=4.5.2
 @nuxt/devtools=3.2.4
+@nuxtjs/supabase=2.0.10

@@ -43,10 +43,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background: theme('colors.outline-variant');
 }
-
-.json-viewer {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
