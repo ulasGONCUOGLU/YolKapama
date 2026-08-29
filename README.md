@@ -69,6 +69,32 @@ app/
 
 > Not: Nominatim'in kullanım politikası gereği yoğun/otomatik sorgularda kendi backend'inizden proxy'lemeniz ve bir `User-Agent` eklemeniz önerilir. Düşük hacimli/geliştirme kullanımı için doğrudan tarayıcıdan istek atmak sorun yaratmaz.
 
+## Backend entegrasyonu (Supabase + Flask)
+
+`.env.example` dosyasını `.env` olarak kopyalayıp doldurun:
+
+```bash
+cp .env.example .env
+```
+
+Doldurman gereken alanlar:
+- `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase Dashboard → Project Settings → API (anon/public anahtar, tarayıcıda kullanımı güvenli)
+- `SUPABASE_SERVICE_ROLE_KEY` — aynı sayfadaki service_role/secret anahtar. **Asla** `NUXT_PUBLIC_` öneki almamalı, asla tarayıcıya sızmamalı.
+- `PYTHON_API_BASE` — Flask'ın adresi. Yerelde varsayılan `http://127.0.0.1:5000` zaten Python backend'in `app.py`'sindeki `127.0.0.1:5000` ile eşleşir.
+- `INTERNAL_API_TOKEN` — Python backend'in `.env`'indeki **aynı** değer.
+
+### Veri akışı
+
+- **Tablo ve Harita sayfaları** → `closures` tablosunu tarayıcıdan doğrudan Supabase'e okuyor (`app/composables/useSupabase.ts`, anon key + RLS ile salt-okunur).
+- **Ayarlar sayfası** → `settings` tablosu tarayıcıya kapalı olduğu için okuma/yazma `server/api/yolkapama/ayarlar.get.ts` ve `ayarlar.post.ts` üzerinden, `service_role` anahtarıyla (`server/utils/supabaseAdmin.ts`) yapılıyor.
+- **"Verileri Çek" butonu** → `server/api/yolkapama/calistir.post.ts`, Flask'ın `/run`'ına `INTERNAL_API_TOKEN` ile proxy yapıyor. Flask hemen `run_id` döner, sayfa `sync_runs` tablosunu 3 saniyede bir polling ile izleyip durumu ("Çalışıyor..." / "Tamamlandı" / hata mesajı) günceller, başarılı olunca haritayı otomatik tazeler.
+
+### Sırasıyla çalıştırma
+
+1. Python backend: `python app.py` (bkz. o projenin README'si)
+2. Bu Nuxt projesi: `npm install && npm run dev`
+3. `/yolkapama` sayfasında "Verileri Çek" butonuna bas, `sync_runs` durumunun Supabase Dashboard'da da güncellendiğini gözlemleyebilirsin.
+
 ## Tasarım kaynağı
 
 Renkler, tipografi ve spacing değerleri `DESIGN.md` (Technical Precision) sisteminden birebir alındı. Değişiklik gerekirse tek kaynak `tailwind.config.ts`.
@@ -76,7 +102,6 @@ Renkler, tipografi ve spacing değerleri `DESIGN.md` (Technical Precision) siste
 ## Yapılacaklar (TODO)
 
 - `Görüntü İşleme` modülü henüz boş — geliştirme başladığında yukarıdaki "Yeni bir modül eklerken" adımlarını izleyin.
-- `pages/yolkapama/tablo.vue`: `closures` dizisi şu an mockup verisiyle dolu — backend API'den (`/api/closures` gibi) çekilecek.
-- `pages/yolkapama/ayarlar.vue`: "Kaydet" butonu şu an sadece console.log yapıyor — backend'e (`/api/settings`) bağlanacak.
 - Mobil sidebar toggle (küçük ekranlarda menü açma/kapama) henüz eklenmedi.
+- Polling yerine ileride Supabase Realtime'a geçilebilir (anlık, daha az istek).
 - Yoğun kullanımda Nominatim isteklerini kendi backend'inizden proxy'lemeyi düşünün.

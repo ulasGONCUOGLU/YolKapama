@@ -3,7 +3,22 @@ export default defineNuxtConfig({
   future: { compatibilityVersion: 4 },
   compatibilityDate: '2025-08-25',
 
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase'],
+  modules: ['@nuxtjs/tailwindcss'],
+
+  // Sunucu-özel (gizli) ve public (tarayıcıya açık) ortam değişkenleri.
+  // Değerler .env dosyasından okunur (bkz. .env.example).
+  runtimeConfig: {
+    // --- Sadece sunucu tarafında erişilebilir (server/api/*) ---
+    supabaseServiceRoleKey: '', // SUPABASE_SERVICE_ROLE_KEY
+    pythonApiBase: 'http://127.0.0.1:5000', // PYTHON_API_BASE
+    internalApiToken: '', // INTERNAL_API_TOKEN (Flask ile paylaşılan gizli anahtar)
+
+    // --- Tarayıcıya açık (anon key zaten public kullanım için tasarlanmıştır) ---
+    public: {
+      supabaseUrl: '', // NUXT_PUBLIC_SUPABASE_URL
+      supabaseAnonKey: '' // NUXT_PUBLIC_SUPABASE_ANON_KEY
+    }
+  },
 
   // Modül bazlı bileşen klasörleri. pathPrefix: false sayesinde
   // <AppSidebar>, <AppHeader>, <OpsMap> gibi isimler klasör öneki almadan kullanılır.
@@ -11,20 +26,6 @@ export default defineNuxtConfig({
     { path: '~/components/yolkapama', pathPrefix: false }
   ],
 
-  supabase: {
-    redirectOptions: {
-      login: '/login',
-      callback: '/confirm',
-      exclude: ['/', '/login', '/register'],
-    },
-  },
-  runtimeConfig: {
-    public: {
-      supabaseUrl: '', 
-      supabaseKey: '',
-    },
-  },
-  
   app: {
     head: {
       title: 'Ops Console - Operasyon Merkezi',

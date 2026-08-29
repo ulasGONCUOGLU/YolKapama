@@ -1,17 +1,49 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'yolkapama' })
 
-const systemPrompt = ref(
-  `Sen Denizli'deki belediyelerin yol kapatma duyurularını analiz eden bir konum analiz sistemisin. Gelen metinleri inceleyip kapatılan caddeleri, sokakları, başlangıç ve bitiş tarihlerini çıkar.
-Güzergah metni:`
-)
-
+const systemPrompt = ref('')
 const theme = ref<'light' | 'dark' | 'system'>('dark')
 
-function kaydet() {
-  // TODO: Backend'e (ör. /api/settings) kaydet
-  console.log('Kaydedildi:', { systemPrompt: systemPrompt.value, theme: theme.value })
+const loading = ref(true)
+const saving = ref(false)
+const saveState = ref<'idle' | 'success' | 'error'>('idle')
+const loadError = ref('')
+
+async function fetchAyarlar() {
+  loading.value = true
+  loadError.value = ''
+
+  try {
+    const data = await $fetch<{ systemPrompt: string }>('/api/yolkapama/ayarlar')
+    systemPrompt.value = data.systemPrompt
+  } catch {
+    loadError.value = 'Ayarlar yüklenemedi. Sunucu route\'u çalışıyor mu?'
+  } finally {
+    loading.value = false
+  }
 }
+
+async function kaydet() {
+  saving.value = true
+  saveState.value = 'idle'
+
+  try {
+    await $fetch('/api/yolkapama/ayarlar', {
+      method: 'POST',
+      body: { systemPrompt: systemPrompt.value }
+    })
+    saveState.value = 'success'
+  } catch {
+    saveState.value = 'error'
+  } finally {
+    saving.value = false
+    setTimeout(() => {
+      saveState.value = 'idle'
+    }, 3000)
+  }
+}
+
+onMounted(fetchAyarlar)
 </script>
 
 <template>
@@ -42,20 +74,36 @@ function kaydet() {
               <label class="font-label-sm text-label-sm text-on-surface-variant uppercase" for="ai-instruction">
                 Sistem Talimatı (System Prompt)
               </label>
-              <textarea
-                id="ai-instruction"
-                v-model="systemPrompt"
-                rows="12"
-                class="w-full bg-background border border-outline-technical rounded text-on-surface font-data-tabular text-data-tabular p-3 focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-colors resize-y"
-              />
-              <div class="flex justify-end mt-2">
-                <button
-                  class="bg-electric-blue text-on-primary font-label-sm text-label-sm px-4 py-2 rounded shadow-sm hover:brightness-110 active:scale-95 transition-all"
-                  @click="kaydet"
-                >
-                  Kaydet
-                </button>
+
+              <div v-if="loading" class="text-on-surface-variant font-body-md text-body-md py-8 text-center">
+                Yükleniyor...
               </div>
+              <div v-else-if="loadError" class="text-error font-body-md text-body-md py-4">
+                {{ loadError }}
+              </div>
+              <template v-else>
+                <textarea
+                  id="ai-instruction"
+                  v-model="systemPrompt"
+                  rows="12"
+                  class="w-full bg-background border border-outline-technical rounded text-on-surface font-data-tabular text-data-tabular p-3 focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-colors resize-y"
+                />
+                <div class="flex items-center justify-end gap-3 mt-2">
+                  <span v-if="saveState === 'success'" class="font-label-sm text-label-sm text-electric-blue">
+                    Kaydedildi
+                  </span>
+                  <span v-else-if="saveState === 'error'" class="font-label-sm text-label-sm text-error">
+                    Kaydedilemedi
+                  </span>
+                  <button
+                    class="bg-electric-blue text-on-primary font-label-sm text-label-sm px-4 py-2 rounded shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                    :disabled="saving"
+                    @click="kaydet"
+                  >
+                    {{ saving ? 'Kaydediliyor...' : 'Kaydet' }}
+                  </button>
+                </div>
+              </template>
             </div>
           </section>
 

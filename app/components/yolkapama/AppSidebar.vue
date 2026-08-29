@@ -26,7 +26,7 @@ function isActive(to: string) {
         </div>
         <div class="flex flex-col overflow-hidden flex-1">
           <span class="font-headline-md text-headline-md font-bold text-primary truncate">Ops Console</span>
-          <span class="font-label-sm text-label-sm text-on-surface-variant truncate">Ulaş Göncüoğlu</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant truncate">Bölgesel Sektör 7</span>
         </div>
         <NuxtLink
           to="/"
