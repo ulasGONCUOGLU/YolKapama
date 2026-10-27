@@ -2,7 +2,7 @@
 definePageMeta({ layout: 'yolkapama' })
 
 const systemPrompt = ref('')
-const theme = ref<'light' | 'dark' | 'system'>('dark')
+const { tema, yukle: temaYukle, sec: temaSec } = useTema()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -43,7 +43,10 @@ async function kaydet() {
   }
 }
 
-onMounted(fetchAyarlar)
+onMounted(() => {
+  temaYukle()
+  fetchAyarlar()
+})
 </script>
 
 <template>
@@ -115,41 +118,39 @@ onMounted(fetchAyarlar)
               <span class="material-symbols-outlined text-on-surface-variant text-sm">palette</span>
               <h2 class="font-headline-md text-headline-md text-on-surface">Renk Paleti</h2>
             </div>
-            <div class="flex flex-col gap-4">
-              <label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Tema Seçimi</label>
+            <fieldset class="flex flex-col gap-3 m-0 p-0 border-0">
+              <legend class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-3">Tema Seçimi</legend>
 
               <label
-                v-for="option in [
-                  { value: 'light', label: 'Açık Tema' },
-                  { value: 'dark', label: 'Koyu Tema' },
-                  { value: 'system', label: 'Sistem Ayarı' }
-                ]"
+                v-for="option in TEMA_SECENEKLERI"
                 :key="option.value"
-                class="flex items-center gap-3 cursor-pointer group"
+                class="flex items-center gap-3 cursor-pointer group rounded border px-3 py-2 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-electric-blue"
+                :class="tema === option.value
+                  ? 'border-electric-blue bg-electric-blue/10'
+                  : 'border-outline-technical hover:border-electric-blue'"
               >
-                <div class="relative flex items-center justify-center">
-                  <input
-                    v-model="theme"
-                    class="peer sr-only"
-                    name="theme"
-                    type="radio"
-                    :value="option.value"
-                  >
-                  <div
-                    class="w-4 h-4 border rounded-full transition-colors"
-                    :class="theme === option.value ? 'border-electric-blue' : 'border-outline-variant group-hover:border-electric-blue'"
-                  />
-                  <div
-                    class="w-2 h-2 bg-electric-blue rounded-full absolute transition-opacity"
-                    :class="theme === option.value ? 'opacity-100' : 'opacity-0'"
-                  />
-                </div>
-                <span
-                  class="font-body-md text-body-md transition-colors"
-                  :class="theme === option.value ? 'text-on-surface' : 'text-on-surface-variant group-hover:text-on-surface'"
-                >{{ option.label }}</span>
+                <input
+                  class="sr-only"
+                  name="theme"
+                  type="radio"
+                  :value="option.value"
+                  :checked="tema === option.value"
+                  @change="temaSec(option.value)"
+                >
+                <span class="material-symbols-outlined text-[20px]" :class="tema === option.value ? 'text-electric-blue' : 'text-on-surface-variant'">{{ option.icon }}</span>
+                <span class="flex flex-col">
+                  <span
+                    class="font-body-md text-body-md transition-colors"
+                    :class="tema === option.value ? 'text-on-surface' : 'text-on-surface-variant group-hover:text-on-surface'"
+                  >{{ option.label }}</span>
+                  <span class="font-label-sm text-[11px] text-on-surface-variant">{{ option.aciklama }}</span>
+                </span>
               </label>
-            </div>
+
+              <p class="font-label-sm text-[11px] text-on-surface-variant m-0 mt-1">
+                Tema yalnızca bu tarayıcıda saklanır; diğer kullanıcıların ekranını etkilemez.
+              </p>
+            </fieldset>
           </section>
         </div>
       </div>

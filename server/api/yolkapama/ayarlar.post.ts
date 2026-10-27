@@ -11,6 +11,8 @@ interface Body {
   systemPrompt?: string
 }
 
+const MAX_PROMPT_LENGTH = 20_000
+
 export default defineEventHandler(async (event) => {
   const body = await readBody<Body>(event)
 
@@ -18,6 +20,13 @@ export default defineEventHandler(async (event) => {
 
   if (!systemPrompt) {
     throw createError({ statusCode: 400, statusMessage: 'systemPrompt boş olamaz.' })
+  }
+
+  if (systemPrompt.length > MAX_PROMPT_LENGTH) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `systemPrompt en fazla ${MAX_PROMPT_LENGTH} karakter olabilir.`
+    })
   }
 
   const supabase = useSupabaseAdmin()

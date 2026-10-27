@@ -1,18 +1,27 @@
 <script setup lang="ts">
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title?: string
     showSearch?: boolean
     searchPlaceholder?: string
     centered?: boolean
+    // Arama metni (v-model). Verilmezse kutu yalnızca görseldir.
+    modelValue?: string
   }>(),
   {
     title: 'Operasyon Merkezi',
     showSearch: false,
     searchPlaceholder: 'Ara...',
-    centered: false
+    centered: false,
+    modelValue: ''
   }
 )
+
+const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>()
+
+function onInput(event: Event) {
+  emit('update:modelValue', (event.target as HTMLInputElement).value)
+}
 </script>
 
 <template>
@@ -23,10 +32,22 @@ withDefaults(
     <div v-if="showSearch" class="flex items-center w-96 relative">
       <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">search</span>
       <input
-        class="w-full bg-surface-container border border-outline-technical rounded py-1.5 pl-9 pr-3 font-data-tabular text-data-tabular text-on-surface focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-all"
+        class="w-full bg-surface-container border border-outline-technical rounded py-1.5 pl-9 pr-8 font-data-tabular text-data-tabular text-on-surface focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-all"
         :placeholder="searchPlaceholder"
+        :value="props.modelValue"
         type="text"
+        @input="onInput"
+        @keydown.esc="emit('update:modelValue', '')"
       >
+      <button
+        v-if="props.modelValue"
+        type="button"
+        class="absolute right-2 text-on-surface-variant hover:text-on-surface"
+        title="Aramayı temizle"
+        @click="emit('update:modelValue', '')"
+      >
+        <span class="material-symbols-outlined text-[16px]">close</span>
+      </button>
     </div>
     <div v-else class="flex items-center gap-gutter">
       <span class="font-headline-lg text-headline-lg font-black text-primary">{{ title }}</span>
