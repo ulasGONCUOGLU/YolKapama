@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LayerGroup, Map as LeafletMap, Marker, TileLayer } from 'leaflet'
-import type { ApproxArea, Closure, ClosureGeometry, GeocodeParca, HaritaAltlik, Kavsak } from '~/types/closure'
+import type { AdmCalisma, ApproxArea, Closure, ClosureGeometry, GeocodeParca, HaritaAltlik, Kavsak, KavsakUyari } from '~/types/closure'
 
 const props = withDefaults(
   defineProps<{
@@ -10,6 +10,8 @@ const props = withDefaults(
     approximate?: ApproxArea[]
     baseLayer?: HaritaAltlik
     kavsaklar?: Kavsak[]
+    admCalismalar?: AdmCalisma[]
+    kavsakUyarilari?: Record<string, KavsakUyari[]>
   }>(),
   {
     center: () => [37.7765, 29.0864], // Denizli merkez
@@ -17,7 +19,9 @@ const props = withDefaults(
     closures: () => [],
     approximate: () => [],
     baseLayer: 'harita',
-    kavsaklar: () => []
+    kavsaklar: () => [],
+    admCalismalar: () => [],
+    kavsakUyarilari: () => ({})
   }
 )
 
@@ -31,7 +35,8 @@ let searchMarker: Marker | null = null
 let closuresLayer: LayerGroup | null = null
 let approxLayer: LayerGroup | null = null
 let kavsakLayer: LayerGroup | null = null
-let kavsakMarkers: { marker: Marker; aktif: boolean }[] = []
+let admLayer: LayerGroup | null = null
+let kavsakMarkers: { marker: Marker; aktif: boolean; uyari: boolean }[] = []
 let baseLayers: Record<string, TileLayer[]> = {}
 let leaflet: typeof import('leaflet') | null = null
 
@@ -87,6 +92,8 @@ onMounted(async () => {
   applyBaseLayer()
 
   // Kavşaklar kapamaların altında kalsın
+  // ADM çalışma alanları en altta (yarı saydam mor), kavşaklar onların üstünde
+  map.createPane('admPane').style.zIndex = '380'
   map.createPane('kavsakPane').style.zIndex = '390'
 
   emitCenter()
@@ -95,6 +102,7 @@ onMounted(async () => {
 
   renderClosures()
   renderApprox()
+  renderAdm()
   renderKavsaklar()
 
   if (pendingFocus) {
@@ -305,7 +313,7 @@ function approxPopupHtml(area: ApproxArea): string {
   </div>`
 }
 
-function kavsakPopupHtml(k: Kavsak): string {
+function kavsakPopupHtml(k: Kavsak, uyarilar: KavsakUyari[] = []): string {
   const evetHayir = (v: boolean) => (v ? 'Evet' : 'Hayır')
   const satirlar: [string, string | null][] = [
     ['Bölge', k.bolge],
@@ -323,9 +331,22 @@ function kavsakPopupHtml(k: Kavsak): string {
     .filter(([, v]) => v)
     .map(([a, v]) => `<tr><td style="color:#6b7a85; padding-right:8px;">${a}</td><td>${escapeHtml(String(v))}</td></tr>`)
     .join('')
-  return `<div style="font-family: Inter, sans-serif; font-size: 13px; max-width: 260px;">
+  const uyariHtml = uyarilar.length
+    ? `<div style="margin-bottom:6px; padding:6px 8px; border-left:3px solid #a855f7; background:#f3e8ff;">
+        <div style="color:#7e22ce; font-weight:700;">⚡ Elektrik çalışması uyarısı</div>
+        ${uyarilar
+          .map(
+            (u) => `<div style="margin-top:3px;">${escapeHtml(u.tarih)} · ${escapeHtml(u.saat)}${u.devam_ediyor ? ' <b>(devam ediyor)</b>' : ''}<br>
+            <span style="color:#6b7a85;">${escapeHtml(u.mahalleler)}${u.mahalleler && u.neden ? ' · ' : ''}${escapeHtml(u.neden)}<br>
+            ${u.iliski === 'icinde' ? 'Çalışma alanının içinde' : `Alana ${u.mesafe_m} m yakın`}</span></div>`
+          )
+          .join('')}
+      </div>`
+    : ''
+  return `<div style="font-family: Inter, sans-serif; font-size: 13px; max-width: 280px;">
     <div style="font-weight:700;">${escapeHtml(k.ad)}</div>
     <div style="color:#6b7a85; margin-bottom:4px;">Sinyalize kavşak · ${escapeHtml(k.kod)}</div>
+    ${uyariHtml}
     <table style="border-collapse:collapse;">${html}</table>
   </div>`
 }
@@ -339,7 +360,7 @@ function kavsakBoyutu(zoom: number): [number, number] {
   return [22, 40]
 }
 
-function kavsakIcon(aktif: boolean, zoom: number) {
+function kavsakIcon(aktif: boolean, zoom: number, uyari = false) {
   const [w, h] = kavsakBoyutu(zoom)
   const kirmizi = aktif ? '#ef4444' : '#8a949e'
   const sari = aktif ? '#facc15' : '#8a949e'
@@ -350,8 +371,11 @@ function kavsakIcon(aktif: boolean, zoom: number) {
     <circle cx="10" cy="18" r="4.2" fill="${sari}"/>
     <circle cx="10" cy="27" r="4.2" fill="${yesil}"/>
   </svg>`
+  const html = uyari
+    ? `<div class="kv-wrap" style="width:${w}px;height:${h}px;"><span class="kv-ring"></span>${svg}</div>`
+    : svg
   return leaflet!.divIcon({
-    html: svg,
+    html,
     className: 'kavsak-ikon',
     iconSize: [w, h],
     iconAnchor: [w / 2, h / 2],
@@ -375,15 +399,17 @@ function renderKavsaklar() {
   for (const k of props.kavsaklar) {
     if (!Number.isFinite(k.latitude) || !Number.isFinite(k.longitude)) continue
     const aktif = k.durum === 'Aktif'
+    const uyari = !!props.kavsakUyarilari[k.kod]?.length
     const marker = leaflet.marker([k.latitude, k.longitude], {
       pane: 'kavsakPane',
-      icon: kavsakIcon(aktif, zoom),
+      icon: kavsakIcon(aktif, zoom, uyari),
+      zIndexOffset: uyari ? 1000 : 0,
       title: k.ad,
       keyboard: true
     })
     marker.bindTooltip(escapeHtml(k.ad), { direction: 'top' })
-    marker.bindPopup(kavsakPopupHtml(k))
-    kavsakMarkers.push({ marker, aktif })
+    marker.bindPopup(kavsakPopupHtml(k, props.kavsakUyarilari[k.kod] ?? []))
+    kavsakMarkers.push({ marker, aktif, uyari: !!props.kavsakUyarilari[k.kod]?.length })
     kavsakLayer.addLayer(marker)
   }
   kavsakLayer.addTo(map)
@@ -392,7 +418,63 @@ function renderKavsaklar() {
 function resizeKavsaklar() {
   if (!map || !kavsakMarkers.length) return
   const zoom = map.getZoom()
-  for (const { marker, aktif } of kavsakMarkers) marker.setIcon(kavsakIcon(aktif, zoom))
+  for (const { marker, aktif, uyari } of kavsakMarkers) marker.setIcon(kavsakIcon(aktif, zoom, uyari))
+}
+
+// ADM (Aydem) planlı elektrik çalışmaları: mor alanlar.
+// Devam edenler dolgulu ve kalın, yaklaşanlar kesikli ve daha saydam çizilir.
+function admPopupHtml(c: AdmCalisma): string {
+  const durum = c.durum_kodu === 'devam_ediyor' ? 'Devam ediyor' : c.durum_kodu === 'iptal' ? 'İptal edildi' : 'Planlandı'
+  const kavsaklar = c.etkilenen_kavsaklar.length
+    ? `<div style="margin-top:6px; padding:6px 8px; border-left:3px solid #a855f7; background:#f3e8ff;">
+        <div style="color:#7e22ce; font-weight:700;">🚦 Etkilenebilecek sinyalize kavşaklar</div>
+        <ul style="margin:2px 0 0; padding-left:16px;">${c.etkilenen_kavsaklar
+          .map((k) => `<li>${escapeHtml(k.ad)} <span style="color:#6b7a85;">(${k.iliski === 'icinde' ? 'alanın içinde' : `${k.mesafe_m} m yakın`})</span></li>`)
+          .join('')}</ul>
+      </div>`
+    : ''
+  return `<div style="font-family: Inter, sans-serif; font-size: 13px; max-width: 280px;">
+    <div style="color:#7e22ce; font-weight:700;">⚡ ADM planlı elektrik çalışması</div>
+    <div style="color:#6b7a85; margin-bottom:4px;">${escapeHtml(durum)} · #${escapeHtml(c.kesinti_id)}</div>
+    <div><b>${escapeHtml(admTarih(c))}</b> · ${escapeHtml(admSaat(c))}</div>
+    <div>${escapeHtml(c.ilce)}${c.mahalleler.length ? ' / ' + escapeHtml(c.mahalleler.join(', ')) : ''}</div>
+    <div style="color:#6b7a85;">${escapeHtml(c.neden ?? '')}</div>
+    ${kavsaklar}
+    <div style="color:#8e909a; font-size:11px; margin-top:6px;">Kaynak: ADM Elektrik. Alan yaklaşıktır.</div>
+  </div>`
+}
+
+function renderAdm() {
+  if (!map || !leaflet) return
+  const L = leaflet
+
+  if (admLayer) {
+    admLayer.remove()
+    admLayer = null
+  }
+  if (!props.admCalismalar.length) return
+
+  admLayer = L.layerGroup()
+  for (const c of props.admCalismalar) {
+    if (!c.geometry) continue
+    const devam = c.durum_kodu === 'devam_ediyor'
+    const stil = {
+      pane: 'admPane',
+      color: '#a855f7',
+      weight: devam ? 3 : 2,
+      dashArray: devam ? undefined : '6 6',
+      fillColor: '#a855f7',
+      fillOpacity: devam ? 0.35 : 0.18
+    }
+    const katman = L.geoJSON(c.geometry as unknown as GeoJSON.GeoJsonObject, {
+      style: () => stil,
+      // Tek noktalı çalışmada alan bilinmiyor: kavşak eşleşmesindeki 150 m'lik daireyi çiz
+      pointToLayer: (_f, latlng) => L.circle(latlng, { ...stil, radius: 150 })
+    })
+    katman.bindPopup(admPopupHtml(c))
+    admLayer.addLayer(katman)
+  }
+  admLayer.addTo(map)
 }
 
 function renderApprox() {
@@ -430,6 +512,20 @@ watch(
 watch(() => props.baseLayer, applyBaseLayer)
 
 watch(
+  () => props.admCalismalar,
+  () => {
+    if (map) renderAdm()
+  }
+)
+
+watch(
+  () => props.kavsakUyarilari,
+  () => {
+    if (map) renderKavsaklar()
+  }
+)
+
+watch(
   () => props.kavsaklar,
   () => {
     if (map) renderKavsaklar()
@@ -454,6 +550,27 @@ defineExpose({ zoomIn, zoomOut, flyToLocation, flyToArea, flyToGeometry })
 .kavsak-ikon {
   background: transparent;
   border: 0;
+}
+/* ADM çalışması etkileyebilecek kavşakta nabız gibi atan mor halka */
+.kv-wrap {
+  position: relative;
+}
+.kv-ring {
+  position: absolute;
+  inset: -7px;
+  border: 2px solid #a855f7;
+  border-radius: 12px;
+  background: rgba(168, 85, 247, 0.18);
+  animation: kv-nabiz 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes kv-nabiz {
+  0% { transform: scale(0.85); opacity: 1; }
+  70% { transform: scale(1.25); opacity: 0.25; }
+  100% { transform: scale(1.25); opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kv-ring { animation: none; }
 }
 .leaflet-control-attribution {
   font-size: 10px;

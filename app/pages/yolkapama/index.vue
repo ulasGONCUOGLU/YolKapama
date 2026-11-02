@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApproxArea, Closure, HaritaAltlik, Kavsak } from '~/types/closure'
+import type { AdmCalisma, AdmSyncDurumu, ApproxArea, Closure, HaritaAltlik, Kavsak } from '~/types/closure'
 
 definePageMeta({ layout: 'yolkapama' })
 
@@ -73,15 +73,111 @@ const kavsaklar = ref<Kavsak[]>([])
 const kavsakLoading = ref(false)
 const kavsakError = ref('')
 const layersOpen = ref(true)
-const kavsakVisible = computed(() => (showKavsak.value ? kavsaklar.value : []))
+
+// ---- ADM (Aydem) planlı elektrik çalışmaları ----
+// Varsayılan: açık; haritada yalnızca sinyalize kavşağı etkileyebilecek (alanın içinde ya da
+// 150 m yakınında) güncel çalışmalar çizilir. Diğerleri yalnızca "ADM Çalışmaları" tablosunda.
+const showAdm = ref(true)
+const showAdmHepsi = ref(false)
+const admCalismalar = ref<AdmCalisma[]>([])
+const admSync = ref<AdmSyncDurumu | null>(null)
+const admError = ref('')
+const admLoading = ref(false)
+const focusAdm = ref<AdmCalisma | null>(null) // tablodan "Göster" ile gelinen çalışma (güncel olmasa da çizilir)
+const admSimdi = ref(Date.now())
+
+const admMapList = computed(() => {
+  if (!showAdm.value && !focusAdm.value) return []
+  const list = showAdm.value
+    ? admCalismalar.value.filter((c) => admHaritadaMi(c, showAdmHepsi.value, admSimdi.value))
+    : []
+  const f = focusAdm.value
+  return f?.geometry && !list.some((c) => c.kesinti_id === f.kesinti_id) ? [...list, f] : list
+})
+
+// Kavşak kodu -> uyarılar (ADM katmanı kapalıysa uyarı da yok)
+const kavsakUyarilari = computed(() =>
+  showAdm.value ? admKavsakUyarilari(admCalismalar.value, admSimdi.value) : {}
+)
+
+// Sinyalize kavşak katmanı kapalı olsa bile etkilenebilecek kavşaklar uyarı için gösterilir
+const kavsakVisible = computed(() => {
+  if (showKavsak.value) return kavsaklar.value
+  const uyarili = kavsakUyarilari.value
+  return kavsaklar.value.filter((k) => uyarili[k.kod]?.length)
+})
+
+// Önümüzdeki 7 gün içinde (ya da şu an devam eden) kavşağı etkileyebilecek çalışmalar
+const admUyariListesi = computed(() => {
+  if (!showAdm.value) return []
+  const sinir = admSimdi.value + 7 * 24 * 3600_000
+  return admCalismalar.value
+    .filter(
+      (c) =>
+        admGuncelMi(c, admSimdi.value) &&
+        c.kavsak_sayisi > 0 &&
+        (c.durum_kodu === 'devam_ediyor' || (c.planlanan_baslangic && new Date(c.planlanan_baslangic).getTime() <= sinir))
+    )
+    .sort((a, b) => (a.planlanan_baslangic ?? '').localeCompare(b.planlanan_baslangic ?? ''))
+})
+const admUyariKavsakSayisi = computed(() => new Set(admUyariListesi.value.flatMap((c) => c.etkilenen_kavsaklar.map((k) => k.kod))).size)
+const admUyariAcik = ref(false)
+
+async function fetchAdm() {
+  if (admLoading.value) return
+  admLoading.value = true
+  admError.value = ''
+  const supabase = useSupabase()
+
+  // Haritada yalnızca güncel (planlı/devam eden) çalışmalar gerekir
+  const { data, error } = await supabase
+    .from('adm_calismalari')
+    .select(ADM_SUTUNLAR)
+    .in('durum_kodu', ['planlandi', 'devam_ediyor'])
+    .eq('kaynaktan_kalkti', false)
+    .gte('planlanan_bitis', new Date(Date.now() - 6 * 3600_000).toISOString())
+    .order('planlanan_baslangic', { ascending: true })
+    .limit(1000)
+
+  if (error) {
+    admError.value = admTabloYokMu(error)
+      ? 'ADM tablosu bulunamadı. supabase/adm_calismalari.sql dosyasını çalıştırın.'
+      : 'ADM çalışmaları yüklenemedi.'
+  } else {
+    admCalismalar.value = (data ?? []) as unknown as AdmCalisma[]
+  }
+  admSimdi.value = Date.now()
+  admLoading.value = false
+
+  const { data: sync } = await supabase.from('adm_sync_durumu').select('*').eq('id', 1).maybeSingle()
+  admSync.value = (sync ?? null) as AdmSyncDurumu | null
+}
+
+// ADM verisi alınamadıysa (ADM biçimi değişti, engellendi vb.) kullanıcıya açıklayıcı mesaj
+const admSyncUyari = computed(() => {
+  const d = admSync.value
+  if (!d || !d.hata_mesaji || (d.durum !== 'hata' && d.durum !== 'kismen')) return null
+  const son = d.son_basarili ? admGunSaat(d.son_basarili) : null
+  return {
+    hata: d.durum === 'hata',
+    mesaj: d.hata_mesaji,
+    son: son ? `${son.gun} ${son.saat}` : null
+  }
+})
+
+function admGoster(c: AdmCalisma) {
+  if (c.geometry) mapRef.value?.flyToGeometry(c.geometry)
+}
 
 function loadLayerPrefs() {
   try {
     const raw = localStorage.getItem(LAYER_PREF_KEY)
     if (!raw) return
-    const p = JSON.parse(raw) as { baseLayer?: string; showKavsak?: boolean }
+    const p = JSON.parse(raw) as { baseLayer?: string; showKavsak?: boolean; showAdm?: boolean; showAdmHepsi?: boolean }
     if (p.baseLayer === 'harita' || p.baseLayer === 'uydu' || p.baseLayer === 'karma') baseLayer.value = p.baseLayer
     if (typeof p.showKavsak === 'boolean') showKavsak.value = p.showKavsak
+    if (typeof p.showAdm === 'boolean') showAdm.value = p.showAdm
+    if (typeof p.showAdmHepsi === 'boolean') showAdmHepsi.value = p.showAdmHepsi
   } catch {
     // localStorage kapalı/bozuk olabilir: varsayılanlarla devam
   }
@@ -89,7 +185,7 @@ function loadLayerPrefs() {
 
 function saveLayerPrefs() {
   try {
-    localStorage.setItem(LAYER_PREF_KEY, JSON.stringify({ baseLayer: baseLayer.value, showKavsak: showKavsak.value }))
+    localStorage.setItem(LAYER_PREF_KEY, JSON.stringify({ baseLayer: baseLayer.value, showKavsak: showKavsak.value, showAdm: showAdm.value, showAdmHepsi: showAdmHepsi.value }))
   } catch {
     // yoksay
   }
@@ -116,9 +212,10 @@ async function fetchKavsaklar() {
   kavsaklar.value = (data ?? []) as Kavsak[]
 }
 
-watch([baseLayer, showKavsak], saveLayerPrefs)
-watch(showKavsak, (v) => {
-  if (v) fetchKavsaklar()
+watch([baseLayer, showKavsak, showAdm, showAdmHepsi], saveLayerPrefs)
+// Kavşak listesi hem kavşak katmanı hem ADM uyarıları (kavşak simgesi) için gerekir
+watch([showKavsak, showAdm], ([k, a]) => {
+  if (k || a) fetchKavsaklar()
   else kavsakError.value = ''
 })
 
@@ -613,7 +710,29 @@ async function verileriCek() {
 // o kapamanın konumuna uçulur (pasif bir kapamaysa haritaya ayrıca çizilir).
 const route = useRoute()
 
+async function focusAdmFromQuery(kesintiId: string) {
+  let c = admCalismalar.value.find((x) => x.kesinti_id === kesintiId) ?? null
+  if (!c) {
+    const { data } = await useSupabase().from('adm_calismalari').select(ADM_SUTUNLAR).eq('kesinti_id', kesintiId).maybeSingle()
+    c = (data ?? null) as unknown as AdmCalisma | null
+  }
+  if (c?.geometry && c.sehir_ici) {
+    focusAdm.value = c
+    showAdm.value = true
+    await nextTick()
+    mapRef.value?.flyToGeometry(c.geometry)
+  } else {
+    searchError.value = 'Bu çalışmanın alanı haritada gösterilemiyor.'
+  }
+}
+
 async function focusFromQuery() {
+  const admId = String(route.query.adm ?? '').trim()
+  if (admId) {
+    await focusAdmFromQuery(admId)
+    return
+  }
+
   const id = Number.parseInt(String(route.query.kapama ?? ''), 10)
   if (!Number.isFinite(id)) return
 
@@ -635,7 +754,9 @@ async function focusFromQuery() {
 
 onMounted(async () => {
   document.addEventListener('click', onDocumentClick)
-  loadLayerPrefs() // kavşak açık kaydedildiyse watch(showKavsak) verileri çeker
+  loadLayerPrefs() // kavşak/ADM açıksa watch verileri çeker
+  if (showAdm.value || showKavsak.value) fetchKavsaklar() // ADM açık varsayılan: watch ilk değerde tetiklenmez
+  await fetchAdm()
   if (window.innerWidth < 640) layersOpen.value = false // dar ekranda kapalı başla
   await fetchMapClosures()
   await focusFromQuery()
@@ -735,15 +856,68 @@ onBeforeUnmount(() => {
         :approximate="approxVisible"
         :base-layer="baseLayer"
         :kavsaklar="kavsakVisible"
+        :adm-calismalar="admMapList"
+        :kavsak-uyarilari="kavsakUyarilari"
         @center-changed="onCenterChanged"
       />
 
-      <!-- Konumu belirlenemeyen aktif kapamalar -->
+      <!-- Sol üst: uyarı şeritleri (ADM elektrik çalışması + konumu belirlenemeyen kapamalar) -->
       <div
-        v-if="unlocatedClosures.length"
+        v-if="unlocatedClosures.length || admUyariListesi.length"
         class="absolute top-4 left-4 z-[450] w-[min(24rem,calc(100%-2rem))] flex flex-col gap-2"
       >
+        <!-- ADM: önümüzdeki 7 günde sinyalize kavşağı etkileyebilecek elektrik çalışmaları -->
+        <template v-if="admUyariListesi.length">
+          <button
+            type="button"
+            class="w-full text-left flex items-center gap-2 bg-surface-container-highest border border-[#a855f7]/70 text-on-surface font-label-sm text-label-sm px-3 py-2 rounded shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:bg-surface-variant transition-colors"
+            :aria-expanded="admUyariAcik"
+            @click="admUyariAcik = !admUyariAcik"
+          >
+            <span class="material-symbols-outlined text-[18px] text-[#a855f7]">bolt</span>
+            <span class="flex-1">
+              ADM elektrik çalışması: <strong>{{ admUyariKavsakSayisi }}</strong> sinyalize kavşak etkilenebilir
+              <span class="text-on-surface-variant">({{ admUyariListesi.length }} çalışma, 7 gün)</span>
+            </span>
+            <span class="material-symbols-outlined text-[18px]">{{ admUyariAcik ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+
+          <div
+            v-if="admUyariAcik"
+            class="bg-surface-container-low border border-outline-technical rounded shadow-[0_4px_12px_rgba(0,0,0,0.5)] max-h-[50vh] overflow-auto"
+          >
+            <div
+              v-for="(c, i) in admUyariListesi"
+              :key="c.kesinti_id"
+              class="px-3 py-2 flex flex-col gap-1 border-l-4 border-[#a855f7]"
+              :class="i % 2 === 0 ? 'bg-zebra' : 'bg-surface-container-low'"
+            >
+              <span class="font-data-tabular text-data-tabular text-on-background">
+                {{ admTarih(c) }} · {{ admSaat(c) }}
+                <span v-if="c.durum_kodu === 'devam_ediyor'" class="text-[#a855f7] font-bold">· devam ediyor</span>
+              </span>
+              <span class="font-label-sm text-label-sm text-on-surface-variant">
+                {{ c.ilce }}{{ c.mahalleler.length ? ' / ' + c.mahalleler.join(', ') : '' }} · {{ c.neden }}
+              </span>
+              <span class="flex flex-wrap gap-1">
+                <span
+                  v-for="k in c.etkilenen_kavsaklar"
+                  :key="k.kod"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[#a855f7]/50 bg-[#a855f7]/10 font-label-sm text-[11px] text-on-surface"
+                >🚦 {{ k.ad }} <span class="text-on-surface-variant">{{ k.iliski === 'icinde' ? 'içinde' : `${k.mesafe_m} m` }}</span></span>
+              </span>
+              <button
+                v-if="c.geometry && c.sehir_ici"
+                type="button"
+                class="self-start font-label-sm text-label-sm text-primary hover:underline"
+                @click="admGoster(c)"
+              >Haritada göster</button>
+            </div>
+          </div>
+        </template>
+
         <button
+          v-if="unlocatedClosures.length"
           type="button"
           class="w-full text-left flex items-center gap-2 bg-surface-container-highest border border-[#ff4d4f]/60 text-on-surface font-label-sm text-label-sm px-3 py-2 rounded shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:bg-surface-variant transition-colors"
           :aria-expanded="unlocatedOpen"
@@ -878,6 +1052,21 @@ onBeforeUnmount(() => {
             {{ syncError }}
           </span>
 
+          <!-- ADM verisi alınamadıysa açıklayıcı uyarı -->
+          <div
+            v-if="admSyncUyari"
+            class="pointer-events-auto max-w-sm text-left rounded border px-3 py-2 shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex gap-2 items-start"
+            :class="admSyncUyari.hata ? 'bg-error-container text-on-error-container border-error/40' : 'bg-surface-container-highest text-on-surface border-[#f59e0b]/60'"
+            role="alert"
+          >
+            <span class="material-symbols-outlined text-[18px] shrink-0">{{ admSyncUyari.hata ? 'error' : 'warning' }}</span>
+            <span class="font-label-sm text-[11px] leading-snug">
+              <strong>{{ admSyncUyari.hata ? 'ADM çalışma verisi alınamadı.' : 'ADM verisi kısmen alınamadı.' }}</strong>
+              {{ admSyncUyari.mesaj }}
+              <template v-if="admSyncUyari.son"><br>Ekrandaki veri son başarılı güncellemeye ait: {{ admSyncUyari.son }}.</template>
+            </span>
+          </div>
+
           <!-- Katmanlar -->
           <section
             class="pointer-events-auto w-56 bg-surface-container-highest border border-outline-technical rounded shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
@@ -921,7 +1110,30 @@ onBeforeUnmount(() => {
                   <span v-if="kavsakLoading" class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
                   <span v-else-if="kavsaklar.length" class="text-on-surface-variant">{{ kavsaklar.length }}</span>
                 </label>
-                <p v-if="showKavsak && kavsakError" class="mt-1 mb-0 font-label-sm text-[11px] text-danger-soft">{{ kavsakError }}</p>
+                <p v-if="(showKavsak || showAdm) && kavsakError" class="mt-1 mb-0 font-label-sm text-[11px] text-danger-soft">{{ kavsakError }}</p>
+              </div>
+
+              <!-- ADM (Aydem) planlı elektrik çalışmaları -->
+              <div class="flex flex-col gap-1">
+                <label class="flex items-center gap-2 cursor-pointer font-label-sm text-label-sm text-on-surface">
+                  <input v-model="showAdm" type="checkbox" class="accent-[#a855f7]">
+                  <span class="inline-block w-3 h-3 rounded-sm border-2 border-[#a855f7] bg-[#a855f7]/30" aria-hidden="true" />
+                  <span class="flex-1">ADM elektrik çalışmaları</span>
+                  <span v-if="admLoading" class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                  <span v-else-if="showAdm" class="text-on-surface-variant">{{ admMapList.length }}</span>
+                </label>
+                <label
+                  v-if="showAdm"
+                  class="flex items-start gap-2 cursor-pointer font-label-sm text-[11px] text-on-surface-variant pl-5"
+                  title="Varsayılan: yalnızca sinyalize kavşağı etkileyebilecek çalışmalar çizilir"
+                >
+                  <input v-model="showAdmHepsi" type="checkbox" class="accent-[#a855f7] mt-0.5">
+                  Kavşağı etkilemeyenleri de göster
+                </label>
+                <p v-if="showAdm && !admMapList.length && !admLoading && !admError" class="mt-0 mb-0 pl-5 font-label-sm text-[11px] text-on-surface-variant">
+                  Haritada gösterilecek güncel çalışma yok.
+                </p>
+                <p v-if="admError" class="mt-0 mb-0 pl-5 font-label-sm text-[11px] text-danger-soft">{{ admError }}</p>
               </div>
             </div>
           </section>

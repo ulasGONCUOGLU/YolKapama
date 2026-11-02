@@ -4,6 +4,7 @@ const route = useRoute()
 const navItems = [
   { label: 'Ana Sayfa', icon: 'home', to: '/yolkapama' },
   { label: 'Yol Kapamalar', icon: 'traffic', to: '/yolkapama/tablo' },
+  { label: 'ADM Çalışmaları', icon: 'bolt', to: '/yolkapama/adm' },
   { label: 'Ayarlar', icon: 'settings', to: '/yolkapama/ayarlar' }
 ]
 

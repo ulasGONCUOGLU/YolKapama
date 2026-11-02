@@ -47,6 +47,19 @@ Bu ZIP, deponuzun (`main` dalı, commit `059a4ef`) güncellenmiş hâlidir.
 | `app/pages/yolkapama/index.vue` (öneri/parça) | Değişti | **Yazdıkça öneri:** kavşak ve aktif kapama adları anında, yer adları 350 ms bekletmeyle; simge ve etiketle ayrılır; Enter hâlâ tam arama yapar. **Kısmen bulunan kapamalar:** "Haritada bulunan parçalar" düğmeleri ve **"Parçaları sırayla gez / Sıradaki parçaya git"** ile her parça ayrı ayrı gösterilir. Sabit hex renkler tema renklerine çevrildi. |
 | `README.md` | Değişti | Kurulum, ortam değişkenleri ve güvenlik notları güncellendi. |
 
+## ADM (Aydem) planlı elektrik çalışmaları (yeni)
+
+| Dosya | Değişiklik | Neden |
+| --- | --- | --- |
+| `supabase/adm_calismalari.sql` | Yeni | `adm_calismalari` ve `adm_sync_durumu` tabloları, yalnız-okuma RLS. `kavsaklar.sql`'den sonra çalıştırın. |
+| `app/pages/yolkapama/adm.vue` | Yeni | "ADM Çalışmaları" sayfası: sıralanabilir tablo, ilçe/durum filtresi, "yalnız kavşağı etkileyenler", arama, hata şeridi, haritada göster. |
+| `app/composables/useAdm.ts` | Yeni | Durum etiketleri, tarih/saat biçimleri, haritada gösterme ve kavşak uyarı kuralları. |
+| `app/components/yolkapama/OpsMap.client.vue` | Değişti | Mor ADM katmanı, kavşakta nabız halkası ve uyarı popup'ı. |
+| `app/pages/yolkapama/index.vue` | Değişti | Katman kutuları, uyarı şeridi, hata kutusu, `?adm=` ile odaklanma. |
+| `app/components/yolkapama/AppSidebar.vue`, `app/types/closure.ts` | Değişti | Menü bağlantısı ve tipler. |
+
+Python tarafı (`adm.py`) veriyi "Verileri Çek" ile getirir; bkz. PythonYolKapama değişiklik notları.
+
 ## Kaldırdığım şey: giriş (auth)
 
 Bir ara kullanıcı girişi eklemiştim, sonra kaldırdım. **Uygulama giriş olmadan çalışıyor, giriş zorunlu değil.**
@@ -74,3 +87,5 @@ npm run dev
 - `npm audit` üretim bağımlılıklarında açık gösteriyor (çoğu Nuxt'ın alt paketlerinde). Sürüm atlamak riskli olduğu için dokunmadım.
 - Leaflet / OSM karo sunucusunu değiştirmedim. OSM'nin karo sunucusunda SLA yoktur; yoğun kullanımda başka sağlayıcıya geçmek gerekir.
 - Git geçmişinizdeki eski commit'lerde `supabaseYed.txt` hâlâ görünür. Dosyayı silmek geçmişi silmez. **Supabase'te o hesabı silin / şifresini değiştirin.**
+
+- ADM özelliğini gerçek ADM adresi ve gerçek Supabase ile denemedim (sahte veriyle tarayıcıda test ettim).

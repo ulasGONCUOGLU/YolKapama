@@ -128,3 +128,67 @@ export interface Kavsak {
 }
 
 export type HaritaAltlik = 'harita' | 'uydu' | 'karma'
+
+// ---------------------------------------------------------------
+// ADM (Aydem) Elektrik planlı çalışmaları (tablo: public.adm_calismalari)
+// Şema: supabase/adm_calismalari.sql — veriyi Python "Verileri Çek" doldurur.
+// ---------------------------------------------------------------
+export type AdmDurumKodu = 'planlandi' | 'devam_ediyor' | 'tamamlandi' | 'iptal' | 'bilinmiyor'
+
+// Çalışma alanı ile sinyalize kavşak ilişkisi: alanın içinde ya da 150 m yakınında
+export interface EtkilenenKavsak {
+  kod: string
+  ad: string
+  iliski: 'icinde' | 'yakin'
+  mesafe_m: number
+}
+
+export interface AdmCalisma {
+  kesinti_id: string
+  durum: string
+  durum_kodu: AdmDurumKodu
+  sehir: string | null
+  ilce: string
+  mahalleler: string[]
+  sokaklar: string[]
+  mahalle_sokak: { Mahalle: string; Sokak: string[] }[] | null
+  neden: string | null
+  planlanan_baslangic: string | null
+  planlanan_bitis: string | null
+  gerceklesen_baslangic: string | null
+  gerceklesen_bitis: string | null
+  geometry: ClosureGeometry | null
+  geometry_turu: 'polygon' | 'cizgi' | 'nokta' | 'yok'
+  geometry_kaynak: string | null
+  merkez_lat: number | null
+  merkez_lon: number | null
+  sehir_ici: boolean
+  etkilenen_kavsaklar: EtkilenenKavsak[]
+  kavsak_sayisi: number
+  onceki_plan: { baslangic: string | null; bitis: string | null; zaman: string } | null
+  kaynaktan_kalkti: boolean
+  ilk_gorulme: string
+  son_gorulme: string
+  updated_at: string
+}
+
+export interface AdmSyncDurumu {
+  id: number
+  durum: 'basarili' | 'kismen' | 'hata' | 'bilinmiyor'
+  son_deneme: string | null
+  son_basarili: string | null
+  hata_mesaji: string | null
+  kayit_sayisi: number | null
+}
+
+// Haritada kavşak simgesinin üstünde gösterilen uyarı satırı
+export interface KavsakUyari {
+  id: string
+  tarih: string
+  saat: string
+  neden: string
+  mahalleler: string
+  iliski: 'icinde' | 'yakin'
+  mesafe_m: number
+  devam_ediyor: boolean
+}

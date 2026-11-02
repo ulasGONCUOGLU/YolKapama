@@ -66,6 +66,7 @@ app/
   - **Uydu:** Esri World Imagery (ücretsiz, atıf gerekir; ticari/yoğun kullanımda Esri koşullarını kontrol edin).
   - **Karma:** uydu görüntüsü + yol ve yer adı etiketleri (Esri Reference katmanları).
 - **Sinyalize kavşaklar** (Katmanlar panelinde aç/kapa): `public.kavsaklar` tablosundan okunur, haritada trafik ışığı simgeleriyle gösterilir (pasif kavşakta lambalar gri; simge zoom'a göre büyür/küçülür); noktaya tıklayınca mod, adaptif/butonlu, iletişim gibi bilgiler açılır. Tablo `supabase/kavsaklar.sql` ile kurulur ve doldurulur (ayrıntı aşağıda).
+- **ADM elektrik çalışmaları** (mor, Katmanlar panelinde aç/kapa): yalnız şehir içinde, güncel ve **sinyalize kavşağı etkileyen** (alan içinde ya da 150 m yakınında) çalışmalar çizilir; devam edenler dolgulu, planlılar kesik çizgili. "Kavşağı etkilemeyenleri de göster" kutusu diğerlerini de çizer. Etkilenen kavşakta mor nabız halkası ve popup'ta uyarı çıkar; sol üstte "N sinyalize kavşak etkilenebilir (7 gün)" şeridi açılıp listelenir. Tüm çalışmalar **ADM Çalışmaları** sayfasındaki tabloda (tarih/saat, ilçe, mahalle, kavşaklar, sokaklar; iptal/tamamlananlar soluk); "Göster" düğmesi `/yolkapama?adm=<kesinti_id>` ile haritada o çalışmaya uçar. ADM'den veri alınamazsa hata mesajı hem tabloda hem ana sayfada görünür.
 - Varsayılan merkez: Denizli (37.7765, 29.0864), zoom 13.
 - Sol alt: harita hareket ettikçe güncellenen Enlem/Boylam okuması (`center-changed` event'i ile).
 - Sağ alt: `+` / `−` butonları `map.zoomIn()` / `map.zoomOut()` çağırır.
@@ -85,6 +86,11 @@ app/
 ### 1b) Sinyalize kavşakları yükleyin (isteğe bağlı)
 
 `supabase/kavsaklar.sql` dosyasını SQL Editor'de bir kez çalıştırın: `kavsaklar` tablosunu (tarayıcıya yalnız okuma izniyle) oluşturur ve KMZ'deki 142 kavşağı ekler. Tekrar çalıştırmak güvenlidir (`kod` üzerinden günceller, çift kayıt oluşturmaz). Enlem ve boylam ayrı sütunlardadır. Yeni kavşak eklemek için aynı dosyadaki `values` listesine bir satır ekleyip yeniden çalıştırın.
+
+### 1c) ADM elektrik çalışmaları tablosu
+
+`supabase/adm_calismalari.sql` dosyasını (**`kavsaklar.sql`'den sonra**) SQL Editor'de çalıştırın: `adm_calismalari` ve `adm_sync_durumu` tablolarını (tarayıcıya yalnız okuma) kurar; tekrar çalıştırmak güvenlidir.
+Veriyi Python tarafı doldurur ("Verileri Çek" butonu). Tablo yoksa sayfa bunu açıkça söyler.
 
 ### 2) Ortam değişkenleri
 
